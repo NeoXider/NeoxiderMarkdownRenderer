@@ -1,0 +1,19 @@
+{
+  "name": "Rtl.MarkdownRenderer.Editor",
+  "rootNamespace": "",
+  "references": [
+    "Markdig",
+    "Rtl.MarkdownRenderer.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

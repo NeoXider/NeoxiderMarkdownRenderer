@@ -1,0 +1,26 @@
+{
+  "name": "Rtl.MarkdownRenderer.Tests.EditMode",
+  "rootNamespace": "Rtl.MarkdownRenderer.Tests.EditMode",
+  "references": [
+    "Markdig",
+    "Rtl.MarkdownRenderer.Runtime",
+    "Rtl.MarkdownRenderer.Editor",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
