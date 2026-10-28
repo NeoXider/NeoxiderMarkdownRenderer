@@ -1,5 +1,9 @@
 # Neoxider Markdown Renderer Changelog
 
+## 1.2.1 — 2026-10-28
+
+- Корень встроенной копии пакета — `Path.GetDirectoryName` на три уровня вверх от скрипта, без обрезки строки.
+
 ## 1.2.0 — 2026-10-28
 
 - Отдельный публичный репозиторий https://github.com/NeoXider/NeoxiderMarkdownRenderer. Лицензия: изменения и

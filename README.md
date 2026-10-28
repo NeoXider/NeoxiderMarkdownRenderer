@@ -8,13 +8,13 @@ no HTML or WebView — so it can sit in any runtime UI (chat bubbles, quiz text,
 Unity 6000.0 or newer. Package Manager → *Add package from git URL*:
 
 ```text
-https://github.com/NeoXider/NeoxiderMarkdownRenderer.git#v1.2.0
+https://github.com/NeoXider/NeoxiderMarkdownRenderer.git#v1.2.1
 ```
 
 or in `Packages/manifest.json`:
 
 ```json
-"com.neoxider.markdownrenderer": "https://github.com/NeoXider/NeoxiderMarkdownRenderer.git#v1.2.0"
+"com.neoxider.markdownrenderer": "https://github.com/NeoXider/NeoxiderMarkdownRenderer.git#v1.2.1"
 ```
 
 ## What is inside

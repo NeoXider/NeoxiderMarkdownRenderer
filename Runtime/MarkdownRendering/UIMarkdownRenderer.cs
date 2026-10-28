@@ -68,7 +68,9 @@ namespace UIMarkdownRenderer
                 const string suffix = "/Runtime/MarkdownRendering/UIMarkdownRenderer.cs";
                 if (path.EndsWith(suffix, System.StringComparison.Ordinal))
                 {
-                    return path.Substring(0, path.Length - suffix.Length);
+                    // Runtime/MarkdownRendering/UIMarkdownRenderer.cs — корень пакета тремя уровнями выше.
+                    return System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(
+                        System.IO.Path.GetDirectoryName(path))).Replace('\\', '/');
                 }
             }
 
