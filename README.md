@@ -10,13 +10,14 @@ Editor tools.
 
 [![Unity](https://img.shields.io/badge/Unity-6000.0%2B-black)](https://unity.com/releases/editor)
 [![License](https://img.shields.io/badge/license-MIT%20%28Neoxider%20changes%29%20%2B%20Unity%20Companion-blue)](#license)
-[![Version](https://img.shields.io/badge/version-1.2.1-5ee05a)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.3.0-5ee05a)](CHANGELOG.md)
 
 <sub>
 <a href="#why">Why</a>&nbsp;&nbsp;•&nbsp;
 <a href="#what-is-inside">What is inside</a>&nbsp;&nbsp;•&nbsp;
 <a href="#install">Install</a>&nbsp;&nbsp;•&nbsp;
 <a href="#quick-start">Quick start</a>&nbsp;&nbsp;•&nbsp;
+<a href="#tables">Tables</a>&nbsp;&nbsp;•&nbsp;
 <a href="#syntax-highlighting">Highlighting</a>&nbsp;&nbsp;•&nbsp;
 <a href="#styling">Styling</a>&nbsp;&nbsp;•&nbsp;
 <a href="#editor-tooling">Editor</a>&nbsp;&nbsp;•&nbsp;
@@ -37,8 +38,8 @@ code, and colours code blocks from a JSON palette instead of hard-coded colours.
 
 ## What is inside
 
-- **`UIMarkdownRenderer`** — headings, bold/italic, inline code, blockquotes, nested lists, links, thematic
-  breaks and fenced code blocks with syntax highlighting (Python, C#).
+- **`UIMarkdownRenderer`** — headings, bold/italic, inline code, blockquotes, nested lists, links, tables,
+  thematic breaks and fenced code blocks with syntax highlighting (Python, C#).
 - **`MarkdownDisplay`** (`[UxmlElement]`) — ready-to-use runtime control: drop it into UXML or create it in
   code, set `Markdown` / `SourceAsset`. Its stylesheet is a serialized reference, so it renders the same in
   the Editor, Play Mode and builds (WebGL, standalone).
@@ -58,13 +59,13 @@ code, and colours code blocks from a JSON palette instead of hard-coded colours.
 Unity **6000.0** or newer. Package Manager → *Add package from git URL*:
 
 ```text
-https://github.com/NeoXider/NeoxiderMarkdownRenderer.git#v1.2.1
+https://github.com/NeoXider/NeoxiderMarkdownRenderer.git#v1.3.0
 ```
 
 or in `Packages/manifest.json`:
 
 ```json
-"com.neoxider.markdownrenderer": "https://github.com/NeoXider/NeoxiderMarkdownRenderer.git#v1.2.1"
+"com.neoxider.markdownrenderer": "https://github.com/NeoXider/NeoxiderMarkdownRenderer.git#v1.3.0"
 ```
 
 `package.json` declares no dependencies: the Markdig parser is vendored under `Runtime/Markdig`.
@@ -101,6 +102,59 @@ In UXML, `MarkdownDisplay` exposes the attributes `markdown`, `source-asset`, `d
 Per-instance options on the renderer: `InlineCodeColor`, `InlineCodeInheritsTextColor`,
 `LinkInheritsTextColor`.
 
+Relative links and media (`./img/pic.png`, `../clip.mp4`) are resolved against the folder of the current
+file. `OpenFile(path)` sets that folder and renders the file; `SetFileContext(path)` sets the same folder
+without rendering anything, for when you feed the text yourself through `SetMarkdown`:
+
+```csharp
+renderer.SetFileContext("Assets/Docs/lesson.md");
+renderer.SetMarkdown(slideText); // ./img/pic.png -> Assets/Docs/img/pic.png
+```
+
+---
+
+## Tables
+
+Pipe tables are rendered as a real grid:
+
+```markdown
+| Item   | Status | Price |
+| :----- | :----: | ----: |
+| Sword  | ready  |   120 |
+| Shield | draft  |    85 |
+```
+
+- A table needs a header row and a separator row (`| --- | --- |`), and a blank line before it. Text that
+  merely contains `|` without a separator row stays a paragraph.
+- The separator row sets the column alignment: `:---` left, `:---:` center, `---:` right.
+- Cells go through the normal pipeline, so bold/italic, inline code, links and images work inside them. Write
+  a literal pipe as `\|`.
+- Columns are sized without measuring text: every cell of a column gets the same weight (length of the
+  column's longest content plus a small allowance for cell padding, clamped to 7…30). The weight is the
+  cell's `flex-grow`, and its `flex-basis` is the weight × 8px with the same `flex-shrink`, so growing and
+  shrinking are both proportional to the weight. The table takes the width of its parent, columns line up
+  across rows, and long text wraps inside its column instead of widening the table. In a parent that
+  shrink-wraps its content (a chat bubble) the table gets that estimated width instead of collapsing.
+- A row with fewer cells than the header is padded with empty cells.
+- Inside a list item a table falls back to text rows (`cell | cell`), because a list is rendered as a single
+  label.
+
+Element tree and USS classes, for theming:
+
+| Class | Element |
+|---|---|
+| `md-table` | The table (also has `block`, plus any classes from `{.my-class}` attributes) |
+| `md-table-row` | Every row |
+| `md-table-header` | Added to the header row |
+| `md-table-row--alt` | Added to every second body row (striping) |
+| `md-table-cell` | Every cell; its content is a regular `.block` with a `.paragraph` label |
+| `md-table-cell--left`, `--center`, `--right` | Added to cells of a column with an explicit alignment |
+
+The renderer sets only the layout inline (`flex-direction: row` on rows; `flex-grow`, `flex-shrink`,
+`flex-basis`, `min-width: 0` on cells; `white-space: normal` and the alignment on cell labels), so tables
+lay out correctly under any theme. Borders, the header background, striping and padding come from
+`Styles/MarkdownRenderer.uss` and can be overridden. Sample: `Examples/04_Tables.md`.
+
 ---
 
 ## Syntax highlighting
@@ -120,10 +174,10 @@ Per-instance options on the renderer: `InlineCodeColor`, `InlineCodeInheritsText
 
 - `Styles/MarkdownRenderer.uss` and `Styles/Quiz.uss` are defaults, not requirements: render with
   `includeDefaultStylesheet: false` and bring your own theme.
-- The default stylesheet is shared by every renderer in the process: the first `MarkdownDisplay` that
-  renders with `IncludeDefaultStylesheet` on decides it for the whole app, unless every instance passes its
-  own `DefaultStyleSheet`. In a build, either always assign one explicitly or turn the default off and layer
-  your own theme.
+- A stylesheet passed to a renderer (or assigned to `MarkdownDisplay.DefaultStyleSheet`) applies to that
+  instance only. An instance without one uses the package stylesheet in the Editor; in a build, where the
+  package asset cannot be looked up, it falls back to the stylesheet most recently passed to any renderer.
+  In a build, either always assign one explicitly or turn the default off and layer your own theme.
 - `InlineCodeInheritsTextColor` and `LinkInheritsTextColor` drop the `<color>` tag, so inline code and links
   take the text colour from your USS (code stays bold, links stay underlined).
 
@@ -135,7 +189,8 @@ Per-instance options on the renderer: `InlineCodeColor`, `InlineCodeInheritsText
 - `Window → Markdown Doc Viewer` — anchors, `Assets/…` / `Packages/…` links, `search:` / `package:`
   lookups, `cmd:` commands.
 - `Window → Neoxider → Markdown Preview` — raw text next to the live render.
-- Media pop-out window.
+- Media pop-out window: `MediaPopoutWindow.Popout(element)` detaches a media element into its own window,
+  `MediaPopoutWindow.EnsureClosed()` closes any open pop-out (call it when your page or slide changes).
 
 ---
 
@@ -155,6 +210,10 @@ Per-instance options on the renderer: `InlineCodeColor`, `InlineCodeInheritsText
 - **Two highlighted languages.** Only Python and C# fences are coloured; `ReloadPalette` swaps palettes for
   those two, it does not register new languages.
 - **No HTML.** Markdown becomes UI Toolkit elements; there is no HTML or WebView rendering path.
+- **Tables are pipe tables.** No grid tables, no cell spans, no multi-line cells; a table always takes the
+  full width of its parent.
+- **Lists are a single label.** Blocks inside a list item (code blocks, tables) are written into the list
+  text rather than rendered as their own elements.
 
 ---
 

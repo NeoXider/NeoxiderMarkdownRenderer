@@ -9,14 +9,14 @@ namespace UIMarkdownRenderer
     /// SAME <see cref="UIMarkdownRenderer"/> pipeline consumers embed at runtime on the right, using
     /// only the package's own default stylesheet (<c>Styles/MarkdownRenderer.uss</c>) — no host
     /// project theme is involved. Use this to sanity-check every supported construct (headings,
-    /// emphasis, inline code, quotes, lists, links, ```python```/```csharp``` code blocks) while
+    /// emphasis, inline code, quotes, lists, links, tables, ```python```/```csharp``` code blocks) while
     /// developing the renderer itself, independent of any consuming project's chat/UI skin.
     ///
     /// Open via <c>Window/Neoxider/Markdown Preview</c>.
     /// </summary>
     public sealed class MarkdownPreviewWindow : EditorWindow
     {
-        private static readonly string DefaultSample = string.Join("\n", new[] { "# Heading 1", "## Heading 2", "### Heading 3", "", "A normal paragraph with **bold**, *italic* and `inline code`.", "", "> A blockquote.", "", "- list item one", "- list item two", "    - nested item", "", "1. numbered item", "2. second item", "", "Code sample:", "", "```python", "def area(radius):", "    return 3.14159 * radius ** 2", "", "for r in [1, 2, 3]:", "    print(f\"r={r}: area={area(r):.2f}\")", "```", "", "And a link: [Neoxider](https://example.com)." });
+        private static readonly string DefaultSample = string.Join("\n", new[] { "# Heading 1", "## Heading 2", "### Heading 3", "", "A normal paragraph with **bold**, *italic* and `inline code`.", "", "> A blockquote.", "", "- list item one", "- list item two", "    - nested item", "", "1. numbered item", "2. second item", "", "Code sample:", "", "```python", "def area(radius):", "    return 3.14159 * radius ** 2", "", "for r in [1, 2, 3]:", "    print(f\"r={r}: area={area(r):.2f}\")", "```", "", "| Item | Status | Price |", "| :--- | :---: | ---: |", "| Sword | ready | 120 |", "| Shield with a longer name | draft | 85 |", "", "And a link: [Neoxider](https://example.com)." });
 
         private TextField _input;
         private VisualElement _previewHost;

@@ -36,7 +36,8 @@ namespace UIMarkdownRenderer
             CreateCachedEditor(target, type, ref m_DefaultEditor);
 
             //TODO : handle also other extension? Potentially skip that and display every file as Markdown?
-            m_IsMDFile = Path.GetExtension(AssetDatabase.GetAssetPath(target)) == ".md";
+            // Без учёта регистра: README.MD — тоже Markdown.
+            m_IsMDFile = string.Equals(Path.GetExtension(m_TargetPath), ".md", StringComparison.OrdinalIgnoreCase);
         }
 
         public override VisualElement CreateInspectorGUI()
@@ -49,7 +50,16 @@ namespace UIMarkdownRenderer
                     return new Label("Markdown asset path is empty.");
                 }
 
-                m_Renderer.OpenFile(Path.GetFullPath(m_TargetPath));
+                // Файл могли удалить или занять, пока инспектор открыт — инспектор при этом не должен падать.
+                try
+                {
+                    m_Renderer.OpenFile(Path.GetFullPath(m_TargetPath));
+                }
+                catch (Exception ex)
+                {
+                    return new Label("Couldn't open the Markdown file: " + ex.Message);
+                }
+
                 return m_Renderer.RootElement;
             }
 

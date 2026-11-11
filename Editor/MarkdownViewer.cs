@@ -38,7 +38,7 @@ namespace UIMarkdownRenderer
             {
                 string path = AssetDatabase.GetAssetPath(txtAsset);
 
-                if (Path.GetExtension(path) == ".md")
+                if (IsMarkdownPath(path))
                 {
                     m_Path = path;
                     Setup();
@@ -64,7 +64,7 @@ namespace UIMarkdownRenderer
 #endif
             string path = asset != null ? AssetDatabase.GetAssetPath(asset) : string.Empty;
 
-            if (Path.GetExtension(path) == ".md")
+            if (IsMarkdownPath(path))
             {
                 Open(path);
                 return true;
@@ -72,6 +72,11 @@ namespace UIMarkdownRenderer
 
             return false;
         }
+
+        // Без учёта регистра: README.MD — тоже Markdown.
+        private static bool IsMarkdownPath(string path) =>
+            !string.IsNullOrEmpty(path) &&
+            string.Equals(Path.GetExtension(path), ".md", StringComparison.OrdinalIgnoreCase);
 
         private static Object InstanceIdToObject(int instanceID)
         {
@@ -182,7 +187,8 @@ namespace UIMarkdownRenderer
 
                 renderer.SendCommand(cmd);
             }
-            else if (link.EndsWith(".md") || link.EndsWith(".txt"))
+            else if (link.EndsWith(".md", StringComparison.OrdinalIgnoreCase) ||
+                     link.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
             {
                 //this is a link to an external MD or text file so we open it with the viewer instead of using Application.OpenURL
                 if (!Path.IsPathRooted(link))

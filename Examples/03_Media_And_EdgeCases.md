@@ -15,14 +15,18 @@ Tom &amp; Jerry
 5 &gt; 3
 ```
 
-## Tables as plain markdown fallback
+## Table
 
 | Key | Value |
 | --- | --- |
 | Renderer | UIMarkdownRenderer |
 | Target | Editor + Runtime + WebGL |
 
-If tables are not styled as real tables, they should still remain readable as text.
+This is rendered as a real table: a header row, bordered cells and striped body rows. More table cases are in [04_Tables.md](04_Tables.md).
+
+## Pipes without a table
+
+A line with pipes but no separator row stays a paragraph: use a | b | c, not d.
 
 ## Image syntax
 

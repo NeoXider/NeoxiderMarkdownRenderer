@@ -16,12 +16,11 @@ namespace UIMarkdownRenderer
     /// <see cref="StyleSheet"/> reference (<see cref="DefaultStyleSheet"/>) — settable from UI Builder or
     /// code — so it renders identically in the Editor, Play Mode and builds (WebGL/standalone/etc).
     ///
-    /// Caveat: <see cref="UIMarkdownRenderer"/> caches its default stylesheet in a <c>static</c> field
-    /// shared by every renderer in the process, so the FIRST <see cref="MarkdownDisplay"/> to render with
-    /// <see cref="IncludeDefaultStylesheet"/> true wins for the whole app unless every instance passes its
-    /// own <see cref="DefaultStyleSheet"/>. For a build, either always assign one explicitly, or set
-    /// <see cref="IncludeDefaultStylesheet"/> false and layer your own theme (the same approach RedoSchool's
-    /// <c>ChatUI</c> feature uses for chat bubbles).
+    /// An explicitly assigned <see cref="DefaultStyleSheet"/> applies to this control only. An instance
+    /// without one gets the package stylesheet in the Editor; in a build (no <c>AssetDatabase</c>) it falls
+    /// back to the stylesheet most recently passed to any renderer, or to none. For a build, either always
+    /// assign one explicitly, or set <see cref="IncludeDefaultStylesheet"/> false and layer your own theme
+    /// (the same approach RedoSchool's <c>ChatUI</c> feature uses for chat bubbles).
     /// </summary>
     [UxmlElement]
     public sealed partial class MarkdownDisplay : VisualElement
@@ -69,7 +68,7 @@ namespace UIMarkdownRenderer
         /// <summary>
         /// Stylesheet applied when <see cref="IncludeDefaultStylesheet"/> is true. Unlike the package's
         /// Editor tools, this is a normal serialized reference so it also works in builds. Leave unset to
-        /// fall back to whatever the process-wide static default currently is (see the caveat above).
+        /// fall back to the shared default (see the class summary).
         /// </summary>
         [UxmlAttribute("default-stylesheet")]
         public StyleSheet DefaultStyleSheet

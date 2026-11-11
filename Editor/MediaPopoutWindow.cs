@@ -1,8 +1,13 @@
+using System;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-internal class MediaPopoutWindow : EditorWindow
+/// <summary>
+///     Окно, в которое открепляется медиа-элемент (видео, картинка) из отрендеренного Markdown.
+///     Публичное: потребителю из другой сборки нужны <see cref="Popout" /> и <see cref="EnsureClosed" />.
+/// </summary>
+public class MediaPopoutWindow : EditorWindow
 {
     private VisualElement m_OriginalContainer;
     private int m_OriginalPositionIndex;
@@ -11,15 +16,24 @@ internal class MediaPopoutWindow : EditorWindow
 
     private void OnDestroy()
     {
-        if (m_PopOutElement == null)
+        try
         {
-            return;
-        }
+            if (m_PopOutElement == null)
+            {
+                return;
+            }
 
-        m_PopOutElement.RemoveFromClassList("popout-media");
-        if (m_OriginalContainer != null)
+            m_PopOutElement.RemoveFromClassList("popout-media");
+            if (m_OriginalContainer != null)
+            {
+                // Исходный контейнер могли перестроить, пока окно было открыто: индекс не должен выйти за границы.
+                int index = Mathf.Clamp(m_OriginalPositionIndex, 0, m_OriginalContainer.childCount);
+                m_OriginalContainer.Insert(index, m_PopOutElement);
+            }
+        }
+        catch (Exception ex)
         {
-            m_OriginalContainer.Insert(m_OriginalPositionIndex, m_PopOutElement);
+            Debug.LogWarning($"MediaPopoutWindow: couldn't return the element to its container: {ex.Message}");
         }
     }
 
@@ -28,6 +42,8 @@ internal class MediaPopoutWindow : EditorWindow
         //needed to receive key event
         rootVisualElement.focusable = true;
         rootVisualElement.Focus();
+        // Фокус приходит много раз: снимаем подписку перед новой, чтобы обработчик не множился.
+        rootVisualElement.UnregisterCallback<KeyDownEvent>(OnKeyPressed);
         rootVisualElement.RegisterCallback<KeyDownEvent>(OnKeyPressed);
     }
 
@@ -48,6 +64,11 @@ internal class MediaPopoutWindow : EditorWindow
 
     public static void Popout(VisualElement element)
     {
+        if (element == null || element.parent == null)
+        {
+            return;
+        }
+
         MediaPopoutWindow win = CreateInstance<MediaPopoutWindow>();
         win.ShowUtility();
 
@@ -67,16 +88,6 @@ internal class MediaPopoutWindow : EditorWindow
             currentElement = currentElement.parent;
         }
 
-        //Make sure we get all the stylesheets of the original element added to the popup window
-        for (int i = 0; i < element.styleSheets.count; ++i)
-        {
-            Debug.Log(element.styleSheets[i]);
-            if (!win.rootVisualElement.styleSheets.Contains(element.styleSheets[i]))
-            {
-                win.rootVisualElement.styleSheets.Add(element.styleSheets[i]);
-            }
-        }
-
         win.m_PopOutElement = element;
 
         win.m_OriginalContainer = element.parent;
@@ -86,13 +97,19 @@ internal class MediaPopoutWindow : EditorWindow
         win.m_PopOutElement.AddToClassList("popout-media");
     }
 
-    //This is called by the tutorial window when changing page to make sure we don't have any left over pop out media
+    /// <summary>
+    ///     Закрывает все открытые окна открепления. Вызывается хозяином рендера при смене страницы или слайда,
+    ///     чтобы откреплённое медиа не пережило свой документ. Окно не создаёт и не фокусирует
+    ///     (<c>GetWindow</c> сделал бы и то и другое): закрываются только существующие экземпляры.
+    /// </summary>
     public static void EnsureClosed()
     {
-        if (HasOpenInstances<MediaPopoutWindow>())
+        foreach (MediaPopoutWindow win in Resources.FindObjectsOfTypeAll<MediaPopoutWindow>())
         {
-            MediaPopoutWindow win = GetWindow<MediaPopoutWindow>();
-            win.Close();
+            if (win != null)
+            {
+                win.Close();
+            }
         }
     }
 }

@@ -33,9 +33,21 @@ namespace UIMarkdownRenderer
         /// <summary>Ссылка остаётся подчёркнутой и кликабельной, но берёт цвет текста от USS, а не синий #4C7EFF.</summary>
         public bool LinkInheritsTextColor { get; set; }
 
+        // Общие значения по умолчанию: в редакторе — ассеты самого пакета (грузятся один раз), в сборке —
+        // последний явно переданный ассет, чтобы рендерер без аргументов по-прежнему получал оформление.
+        // Явно переданный в конструктор ассет в эти поля как «значение для всех» больше не попадает:
+        // он хранится в экземпляре (m_DefaultStylesheet и т.д.) и действует только на свой рендерер.
         private static StyleSheet s_DefaultStylesheet;
         private static VisualTreeAsset s_VideoPlayerElementPrefab;
         private static StyleSheet s_VideoPlayerStyleSheet;
+
+        private static StyleSheet s_LastExplicitDefaultStylesheet;
+        private static VisualTreeAsset s_LastExplicitVideoPlayerElementPrefab;
+        private static StyleSheet s_LastExplicitVideoPlayerStyleSheet;
+
+        private readonly StyleSheet m_DefaultStylesheet;
+        private readonly VisualTreeAsset m_VideoPlayerElementPrefab;
+        private readonly StyleSheet m_VideoPlayerStyleSheet;
 
 #if UNITY_EDITOR
         private const string EditorDefaultStylesheetPath = "Styles/MarkdownRenderer.uss";
@@ -78,8 +90,11 @@ namespace UIMarkdownRenderer
         }
 #endif
 
+        // Порядок расширений важен: UseGenericAttributes подключается к уже добавленным парсерам, поэтому по
+        // рекомендации Markdig стоит последним. Pipe-таблицы требуют строку-разделитель под шапкой
+        // (RequireHeaderSeparator по умолчанию), так что абзац с символами `|` таблицей не становится.
         private static readonly MarkdownPipeline s_StaticPipeline =
-            new MarkdownPipelineBuilder().UseGenericAttributes().UseYamlFrontMatter().Build();
+            new MarkdownPipelineBuilder().UsePipeTables().UseYamlFrontMatter().UseGenericAttributes().Build();
 
         public class Command
         {
@@ -206,10 +221,16 @@ namespace UIMarkdownRenderer
             }
             else if (link.StartsWith(".") || link.StartsWith(".."))
             {
-                if (!string.IsNullOrEmpty(FileFolder))
+                try
                 {
-                    link = "/" + link;
-                    link = FileFolder + link;
+                    // "./" и "../" резолвим относительно папки текущего файла в нормальный полный путь:
+                    // склейка строк оставляла в пути "/./" и "/../", а без папки файла отдавала ссылку как есть.
+                    link = Path.GetFullPath(Path.Combine(string.IsNullOrEmpty(FileFolder) ? "." : FileFolder, link));
+                }
+                catch (Exception)
+                {
+                    // Недопустимые символы в ссылке не должны ронять рендер документа.
+                    return link;
                 }
             }
             else if (link.StartsWith("Packages") || link.StartsWith("Assets"))
@@ -224,7 +245,7 @@ namespace UIMarkdownRenderer
 
         public void RegisterCommandHandler(CommandHandlerDelegate handler) => m_CommandHandler += handler;
 
-        public void SendCommand(Command cmd) => m_CommandHandler.Invoke(cmd);
+        public void SendCommand(Command cmd) => m_CommandHandler?.Invoke(cmd);
 
         private void DefaultCommandHandler(Command cmd)
         {
@@ -287,23 +308,9 @@ namespace UIMarkdownRenderer
             ColorUtility.TryParseHtmlString(VsCodePalette.InlineCode, out Color inlineCodeColor);
             InlineCodeColor = inlineCodeColor;
 
-            if (defaultStylesheet != null)
-            {
-                s_DefaultStylesheet = defaultStylesheet;
-            }
-
-            if (videoPlayerStyleSheet != null)
-            {
-                s_VideoPlayerStyleSheet = videoPlayerStyleSheet;
-            }
-
-            if (videoPlayerElementPrefab != null)
-            {
-                s_VideoPlayerElementPrefab = videoPlayerElementPrefab;
-            }
-
 #if UNITY_EDITOR
-            if (includeDefaultStylesheet && s_DefaultStylesheet == null)
+            // Ассеты пакета нужны только тому, кто не передал свои: явный аргумент общий кэш не трогает.
+            if (includeDefaultStylesheet && defaultStylesheet == null && s_DefaultStylesheet == null)
             {
                 s_DefaultStylesheet = AssetDatabase.LoadAssetAtPath(
                     EditorPackageAssetPath(EditorDefaultStylesheetPath),
@@ -314,13 +321,16 @@ namespace UIMarkdownRenderer
                 }
             }
 
-            if (s_VideoPlayerElementPrefab == null)
+            if (videoPlayerElementPrefab == null && s_VideoPlayerElementPrefab == null)
             {
                 s_VideoPlayerElementPrefab =
                     AssetDatabase.LoadAssetAtPath(
                         EditorPackageAssetPath(EditorVideoPlayerUxmlPath),
                         typeof(VisualTreeAsset)) as VisualTreeAsset;
+            }
 
+            if (videoPlayerStyleSheet == null && s_VideoPlayerStyleSheet == null)
+            {
                 s_VideoPlayerStyleSheet =
                     AssetDatabase.LoadAssetAtPath(
                         EditorPackageAssetPath(EditorVideoPlayerStylesheetPath),
@@ -332,6 +342,30 @@ namespace UIMarkdownRenderer
             m_LoadingTexture = Texture2D.grayTexture;
 #endif
 
+            // Раньше явный аргумент перезаписывал статическое поле, и его получал каждый следующий рендерер
+            // в процессе. Теперь он действует на свой экземпляр; без аргумента берётся ассет пакета (редактор)
+            // либо последний явно переданный (сборка, где AssetDatabase нет) — прежние вызовы не ломаются.
+            m_DefaultStylesheet = FirstAlive(defaultStylesheet, s_DefaultStylesheet, s_LastExplicitDefaultStylesheet);
+            m_VideoPlayerElementPrefab = FirstAlive(videoPlayerElementPrefab, s_VideoPlayerElementPrefab,
+                s_LastExplicitVideoPlayerElementPrefab);
+            m_VideoPlayerStyleSheet = FirstAlive(videoPlayerStyleSheet, s_VideoPlayerStyleSheet,
+                s_LastExplicitVideoPlayerStyleSheet);
+
+            if (defaultStylesheet != null)
+            {
+                s_LastExplicitDefaultStylesheet = defaultStylesheet;
+            }
+
+            if (videoPlayerElementPrefab != null)
+            {
+                s_LastExplicitVideoPlayerElementPrefab = videoPlayerElementPrefab;
+            }
+
+            if (videoPlayerStyleSheet != null)
+            {
+                s_LastExplicitVideoPlayerStyleSheet = videoPlayerStyleSheet;
+            }
+
             ObjectRenderers.Add(new YamlFrontMatterHandler());
 
             ObjectRenderers.Add(new ParagraphBlockRenderer());
@@ -340,8 +374,10 @@ namespace UIMarkdownRenderer
             ObjectRenderers.Add(new CodeBlockRenderer());
             ObjectRenderers.Add(new ThematiceBreakBlockRenderer());
             ObjectRenderers.Add(new QuoteBlockRenderer());
+            ObjectRenderers.Add(new TableRenderer());
 
             ObjectRenderers.Add(new EmphasisInlineRenderer());
+            ObjectRenderers.Add(new DelimiterInlineRenderer());
             ObjectRenderers.Add(new LiteralInlineRenderer());
             ObjectRenderers.Add(new LineBreakInlineRenderer());
             ObjectRenderers.Add(new CodeInlineRenderer());
@@ -396,9 +432,9 @@ namespace UIMarkdownRenderer
                 RootElement = ContentRoot;
             }
 
-            if (includeDefaultStylesheet && s_DefaultStylesheet != null)
+            if (includeDefaultStylesheet && m_DefaultStylesheet != null)
             {
-                RootElement.styleSheets.Add(s_DefaultStylesheet);
+                RootElement.styleSheets.Add(m_DefaultStylesheet);
             }
 
             foreach (StyleSheet stylesheet in m_CustomStylesheets)
@@ -407,10 +443,28 @@ namespace UIMarkdownRenderer
             }
         }
 
+        // Сравнение через оператор UnityEngine.Object: уничтоженный ассет считается отсутствующим.
+        private static T FirstAlive<T>(T first, T second, T third) where T : UnityEngine.Object
+        {
+            if (first != null)
+            {
+                return first;
+            }
+
+            return second != null ? second : third;
+        }
+
         public void OpenFile(string filePath)
         {
-            m_LocalFilePath = Path.GetDirectoryName(filePath);
-            FileFolder = Path.GetFullPath(m_LocalFilePath);
+            if (string.IsNullOrEmpty(filePath))
+            {
+                // Пустой путь раньше падал внутри Path.GetDirectoryName / Path.GetFullPath. Контекст файла не
+                // меняем, а в документе показываем тот же видимый fallback, что и для отсутствующего файла.
+                SetMarkdown("# Markdown file not found\n\nThe file path is empty.");
+                return;
+            }
+
+            SetFileContext(filePath);
 
             if (!File.Exists(filePath))
             {
@@ -422,6 +476,23 @@ namespace UIMarkdownRenderer
             }
 
             SetMarkdown(File.ReadAllText(filePath));
+        }
+
+        /// <summary>
+        ///     Задаёт папку файла (для относительных ссылок, картинок, видео и <c>uss:</c> из front matter)
+        ///     так же, как <see cref="OpenFile" />, но ничего не рендерит: текст потом подаётся через
+        ///     <see cref="SetMarkdown" />. Пустой путь игнорируется, файл может не существовать.
+        /// </summary>
+        public void SetFileContext(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath))
+            {
+                return;
+            }
+
+            string folder = Path.GetDirectoryName(filePath);
+            m_LocalFilePath = folder;
+            FileFolder = Path.GetFullPath(string.IsNullOrEmpty(folder) ? "." : folder);
         }
 
         public void SetMarkdown(string markdownText)
@@ -466,12 +537,33 @@ namespace UIMarkdownRenderer
         public void AddCustomUSS(string path)
         {
 #if UNITY_EDITOR
-            if (path.StartsWith("."))
+            if (string.IsNullOrEmpty(path))
             {
-                path = m_LocalFilePath + path.Remove(0, 1);
+                return;
             }
 
-            StyleSheet stylesheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
+            if (path.StartsWith("."))
+            {
+                if (string.IsNullOrEmpty(m_LocalFilePath))
+                {
+                    // Текст подан через SetMarkdown без контекста файла — относительный путь резолвить не от чего.
+                    Debug.LogWarning($"Markdown custom USS {path} is relative, but no file context is set");
+                    return;
+                }
+
+                path = Path.Combine(m_LocalFilePath, path.Substring(1).TrimStart('/', '\\')).Replace('\\', '/');
+            }
+
+            StyleSheet stylesheet;
+            try
+            {
+                stylesheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"Couldn't load custom USS {path}: {ex.Message}");
+                return;
+            }
 
             if (stylesheet == null)
             {
@@ -536,15 +628,15 @@ namespace UIMarkdownRenderer
             FinishBlock();
 
             VideoPlayerElement newPlayer = null;
-            if (s_VideoPlayerElementPrefab != null)
+            if (m_VideoPlayerElementPrefab != null)
             {
-                newPlayer = s_VideoPlayerElementPrefab.Instantiate().Q<VideoPlayerElement>();
+                newPlayer = m_VideoPlayerElementPrefab.Instantiate().Q<VideoPlayerElement>();
             }
 
             newPlayer ??= new VideoPlayerElement();
-            if (s_VideoPlayerStyleSheet != null)
+            if (m_VideoPlayerStyleSheet != null)
             {
-                newPlayer.styleSheets.Add(s_VideoPlayerStyleSheet);
+                newPlayer.styleSheets.Add(m_VideoPlayerStyleSheet);
             }
 
             m_BlockStack.Peek().Add(newPlayer);
@@ -742,6 +834,30 @@ namespace UIMarkdownRenderer
         }
 
         internal VisualElement StartBlock(params string[] classList) => StartBlock(classList.ToList());
+
+        /// <summary>
+        ///     Вложенный контейнер без класса <c>block</c> (строка и ячейка таблицы): отступы блока ему не нужны,
+        ///     а содержимое должно попадать внутрь. Закрывается обычным <see cref="FinishBlock" />.
+        ///     При <see cref="LockTextCreation" /> возвращает null, как и <see cref="StartBlock(string[])" />.
+        /// </summary>
+        internal VisualElement StartContainer(params string[] classList)
+        {
+            if (LockTextCreation)
+            {
+                return null;
+            }
+
+            VisualElement container = new();
+            foreach (string c in classList)
+            {
+                container.AddToClassList(c);
+            }
+
+            m_BlockStack.Peek().Add(container);
+            m_BlockStack.Push(container);
+
+            return container;
+        }
 
         internal void FinishBlock()
         {

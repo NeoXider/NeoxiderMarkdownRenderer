@@ -35,9 +35,17 @@ namespace UIMarkdownRenderer.ObjectRenderers
 
                 VisualElement resultingElement = null;
 
-                string ext = Path.GetExtension(link);
+                // Расширение сравниваем без учёта регистра (".MP4" — тоже видео); мусор в ссылке не роняет рендер.
+                string ext = string.Empty;
+                try
+                {
+                    ext = Path.GetExtension(link);
+                }
+                catch (ArgumentException)
+                {
+                }
 
-                if (videoFilesTypes.Contains(ext))
+                if (videoFilesTypes.Contains(ext, StringComparer.OrdinalIgnoreCase))
                 {
                     // video
                     VideoPlayerElement vidPlayer = renderer.AddVideoPlayer();
@@ -52,11 +60,31 @@ namespace UIMarkdownRenderer.ObjectRenderers
                     {
                         resultingElement = imgElem;
                         ApplyAttributes(obj, resultingElement);
-                        resultingElement.tooltip = obj.FirstChild.ToString();
+                        resultingElement.tooltip = GetAltText(obj);
                         return;
                     }
 
-                    UnityWebRequest uwr = new(requestLink, UnityWebRequest.kHttpVerbGET);
+                    UnityWebRequest uwr = null;
+                    UnityWebRequestAsyncOperation asyncOp;
+                    try
+                    {
+                        // Мусор в ссылке (пробелы, "C:\…") не должен ронять рендер всего документа.
+                        uwr = new UnityWebRequest(requestLink, UnityWebRequest.kHttpVerbGET);
+                        uwr.downloadHandler = new DownloadHandlerTexture();
+                        uwr.SetRequestHeader("User-Agent", RequestUserAgent);
+                        uwr.SetRequestHeader("Accept", "image/*,*/*;q=0.8");
+                        asyncOp = uwr.SendWebRequest();
+                    }
+                    catch (Exception ex)
+                    {
+                        uwr?.Dispose();
+                        Debug.LogWarning($"Markdown image bad link '{link}': {ex.Message}");
+                        resultingElement = imgElem;
+                        ApplyAttributes(obj, resultingElement);
+                        resultingElement.tooltip = GetAltText(obj);
+                        return;
+                    }
+
                     imgElem.RegisterCallback<GeometryChangedEvent>(evt =>
                     {
                         if (imgElem.image != null)
@@ -76,11 +104,6 @@ namespace UIMarkdownRenderer.ObjectRenderers
                             }
                         }
                     });
-
-                    uwr.downloadHandler = new DownloadHandlerTexture();
-                    uwr.SetRequestHeader("User-Agent", RequestUserAgent);
-                    uwr.SetRequestHeader("Accept", "image/*,*/*;q=0.8");
-                    UnityWebRequestAsyncOperation asyncOp = uwr.SendWebRequest();
 
                     asyncOp.completed += operation =>
                     {
@@ -117,9 +140,12 @@ namespace UIMarkdownRenderer.ObjectRenderers
                 }
 
                 ApplyAttributes(obj, resultingElement);
-                resultingElement.tooltip = obj.FirstChild.ToString();
+                resultingElement.tooltip = GetAltText(obj);
             }
         }
+
+        // У картинки без подписи (`![](url)`) дочернего узла нет — раньше на этом падал рендер документа.
+        private static string GetAltText(LinkInline obj) => obj.FirstChild?.ToString() ?? string.Empty;
 
         private static void ApplyAttributes(LinkInline obj, VisualElement resultingElement)
         {
@@ -141,9 +167,18 @@ namespace UIMarkdownRenderer.ObjectRenderers
                 return link;
             }
 
-            string localPath = Path.IsPathRooted(link) || string.IsNullOrEmpty(fileFolder)
-                ? link
-                : Path.Combine(fileFolder, link);
+            string localPath = link;
+            try
+            {
+                if (!Path.IsPathRooted(link) && !string.IsNullOrEmpty(fileFolder))
+                {
+                    localPath = Path.Combine(fileFolder, link);
+                }
+            }
+            catch (ArgumentException)
+            {
+                // Недопустимые для пути символы: оставляем ссылку как есть, запрос просто не найдёт файл.
+            }
 
             return "file://" + localPath.Replace("\\", "/");
         }

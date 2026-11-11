@@ -1,5 +1,7 @@
+using System;
 using Markdig.Extensions.Yaml;
 using Markdig.Renderers;
+using UnityEngine;
 
 namespace UIMarkdownRenderer
 {
@@ -8,21 +10,39 @@ namespace UIMarkdownRenderer
     {
         protected override void Write(UIMarkdownRenderer renderer, YamlFrontMatterBlock obj)
         {
-            //we do not handle real YAML as for now we only support specific uss, so manually parse
-            foreach (object line in obj.Lines)
+            try
             {
-                string data = line.ToString();
-                if (string.IsNullOrEmpty(data))
+                //we do not handle real YAML as for now we only support specific uss, so manually parse
+                foreach (object line in obj.Lines)
                 {
-                    continue;
-                }
+                    string data = line.ToString();
+                    if (string.IsNullOrEmpty(data))
+                    {
+                        continue;
+                    }
 
-                string[] content = data.Split(':');
-                if (content[0].Trim() == "uss")
-                {
-                    string path = content[1].Trim();
-                    renderer.AddCustomUSS(path);
+                    // Разбор по ПЕРВОМУ двоеточию: строка без ':' (например "uss") раньше роняла весь рендер
+                    // выходом за границы массива, а путь с двоеточием ("C:/…") обрезался по второму.
+                    int separator = data.IndexOf(':');
+                    if (separator < 0)
+                    {
+                        continue;
+                    }
+
+                    if (data.Substring(0, separator).Trim() == "uss")
+                    {
+                        string path = data.Substring(separator + 1).Trim();
+                        if (!string.IsNullOrEmpty(path))
+                        {
+                            renderer.AddCustomUSS(path);
+                        }
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                // Front matter — необязательные метаданные: его ошибка не должна оставлять документ пустым.
+                Debug.LogWarning($"Markdown front matter could not be parsed: {ex.Message}");
             }
         }
     }

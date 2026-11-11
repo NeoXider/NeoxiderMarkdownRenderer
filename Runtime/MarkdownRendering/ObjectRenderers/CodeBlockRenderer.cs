@@ -118,15 +118,53 @@ namespace UIMarkdownRenderer.ObjectRenderers
             string rawCode = GetRawCode(obj);
             string[] lines = rawCode.Replace("\r\n", "\n").Split('\n');
 
+            ISyntaxHighlighter highlighter = ResolveHighlighter(firstLanguageToken);
+
             if (block == null)
+            {
+                // Внутри списка (LockTextCreation) отдельный блок создать нельзя: StartBlock вернул null, и раньше
+                // код молча пропадал. Пишем его строки текстом в метку списка — содержимое не теряется.
+                WriteCodeLinesAsText(renderer, lines, highlighter);
+                return;
+            }
+
+            RenderCodeLines(block, lines, highlighter);
+
+            renderer.FinishBlock();
+        }
+
+        private static void WriteCodeLinesAsText(UIMarkdownRenderer renderer, string[] lines,
+            ISyntaxHighlighter highlighter)
+        {
+            if (renderer.CurrentBlockTextLabel == null)
             {
                 return;
             }
 
-            ISyntaxHighlighter highlighter = ResolveHighlighter(firstLanguageToken);
-            RenderCodeLines(block, lines, highlighter);
+            string[] expanded = new string[lines.Length];
+            for (int i = 0; i < lines.Length; i++)
+            {
+                expanded[i] = lines[i].Replace("\t", "    ");
+            }
 
-            renderer.FinishBlock();
+            // Подсветчик сохраняет пробелы строки, поэтому отступы кода остаются; без подсветчика код
+            // получает цвет встроенного кода (или цвет текста, если потребитель так настроил рендерер).
+            string[] rendered = highlighter != null ? highlighter.Highlight(expanded) : null;
+            string plainColor = renderer.InlineCodeInheritsTextColor
+                ? null
+                : "#" + ColorUtility.ToHtmlStringRGB(renderer.InlineCodeColor);
+            string indent = new(' ', renderer.IndentLevel * 2);
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string text = rendered != null ? rendered[i] : SyntaxHighlightText.Escape(expanded[i]);
+                if (rendered == null && plainColor != null && text.Length > 0)
+                {
+                    text = "<color=" + plainColor + ">" + text + "</color>";
+                }
+
+                renderer.WriteText(indent + text + "\n");
+            }
         }
 
         private static ISyntaxHighlighter ResolveHighlighter(string language)
