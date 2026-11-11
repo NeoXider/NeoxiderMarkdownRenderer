@@ -9,7 +9,7 @@
 .video-control-bar {
   height: 48px;
   width: 100%;
-  background-color: var(--rs-code-surface);
+  background-color: var(--rs-code-surface, rgb(36, 40, 48));
 
   flex-direction: column;
 
@@ -26,7 +26,7 @@
 
 .video-play-track {
   height: 8px;
-  background-color: var(--rs-code-surface-strong);
+  background-color: var(--rs-code-surface-strong, rgb(24, 27, 33));
   flex-grow: 0;
 }
 
@@ -59,7 +59,7 @@
 }
 
 .video-speed-label {
-  color: var(--rs-code-md-text);
+  color: var(--rs-code-md-text, rgb(220, 226, 235));
   -unity-text-align: middle-center;
   margin: 0;
   padding: 0;
@@ -72,22 +72,22 @@
 }
 
 .video-speed-label-container:hover {
-  border-color: var(--rs-code-md-text);
+  border-color: var(--rs-code-md-text, rgb(220, 226, 235));
   border-width: 1px;
   padding: 1px;
-  background-color: var(--rs-code-surface);
+  background-color: var(--rs-code-surface, rgb(36, 40, 48));
 }
 
 .video-speed-label-container.selected {
   padding: 0px;
-  border-color: var(--rs-code-function);
+  border-color: var(--rs-code-function, rgb(84, 196, 255));
   border-width: 1px;
 }
 
 
 .video-speed-selector {
   height: 100px;
-  background-color: var(--rs-code-surface);
+  background-color: var(--rs-code-surface, rgb(36, 40, 48));
 
   position: absolute;
   left: 0;
@@ -117,7 +117,7 @@
 }
 
 .video-control-button:hover {
-  -unity-background-image-tint-color: var(--rs-code-function);
+  -unity-background-image-tint-color: var(--rs-code-function, rgb(84, 196, 255));
 }
 
 .video-popup-button {
@@ -126,7 +126,7 @@
 }
 
 .video-play-track-filler {
-  background-color: var(--rs-code-function);
+  background-color: var(--rs-code-function, rgb(84, 196, 255));
 }
 
 .video-play-track-head {
@@ -138,7 +138,7 @@
   position: absolute;
   flex-grow: 0;
 
-  background-color: var(--rs-code-md-text);
+  background-color: var(--rs-code-md-text, rgb(220, 226, 235));
   right: -6px;
 }
 
@@ -174,7 +174,7 @@
 
   flex-direction: column-reverse;
 
-  background-color: var(--rs-code-md-bg);
+  background-color: var(--rs-code-md-bg, rgb(18, 22, 30));
   align-items: flex-start;
   justify-content: flex-start;
 
@@ -187,7 +187,7 @@
 }
 
 .video-control-button:hover {
-  -unity-background-image-tint-color: var(--rs-code-function);
+  -unity-background-image-tint-color: var(--rs-code-function, rgb(84, 196, 255));
 }
 
 .video-content:hover .video-control-bar {
@@ -208,7 +208,7 @@
 .video-content .video-pause-label,
 .video-speed-button #SpeedLabel {
   flex-grow: 1;
-  color: var(--rs-code-md-text);
+  color: var(--rs-code-md-text, rgb(220, 226, 235));
   font-size: 14px;
   -unity-font-style: bold;
   -unity-text-align: middle-center;
@@ -221,9 +221,9 @@
   justify-content: center;
   align-items: stretch;
   border-width: 1px;
-  border-color: var(--rs-code-border);
+  border-color: var(--rs-code-border, rgba(120, 140, 170, 0.35));
   border-radius: 8px;
-  background-color: var(--rs-code-surface-strong);
+  background-color: var(--rs-code-surface-strong, rgb(24, 27, 33));
 }
 
 .video-play-button .video-pause-label {
@@ -232,21 +232,21 @@
 
 .video-control-button:hover,
 .video-audio-icon:hover {
-  background-color: var(--rs-code-surface);
+  background-color: var(--rs-code-surface, rgb(36, 40, 48));
 }
 
 .video-audio-slider .unity-base-slider__tracker {
-  background-color: var(--rs-code-border);
+  background-color: var(--rs-code-border, rgba(120, 140, 170, 0.35));
 }
 
 .video-audio-slider .unity-base-slider__dragger {
-  background-color: var(--rs-code-function);
+  background-color: var(--rs-code-function, rgb(84, 196, 255));
 }
 
 /* Ошибка остаётся читаемой и в видео, вложенном в светлый разговор. */
 .video-content .video-error-label {
-  color: var(--rs-code-md-text);
-  background-color: var(--rs-code-surface);
+  color: var(--rs-code-md-text, rgb(220, 226, 235));
+  background-color: var(--rs-code-surface, rgb(36, 40, 48));
   white-space: normal;
   padding: 8px;
 }
