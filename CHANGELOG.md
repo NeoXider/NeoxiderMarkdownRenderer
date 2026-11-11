@@ -1,5 +1,11 @@
 # Neoxider Markdown Renderer Changelog
 
+## 1.3.1 — 2026-11-11
+
+- `YamlFrontMatterHandler`: ключ строки front matter сравнивается срезом (`AsSpan(0, n).Trim()`) вместо
+  `Substring(0, n)`: поведение то же, но без выделения и копирования подстроки. Потребитель RedoSchool держит
+  страж «никакой сырой обрезки строк вне TextCap», и подстрока ключа в разборе 1.3.0 его краснила.
+
 ## 1.3.0 — 2026-11-11
 
 - Таблицы Markdown (pipe tables). В конвейер Markdig добавлено `UsePipeTables()` (порядок расширений:

@@ -29,7 +29,8 @@ namespace UIMarkdownRenderer
                         continue;
                     }
 
-                    if (data.Substring(0, separator).Trim() == "uss")
+                    // Ключ сравнивается срезом без выделения подстроки: строка не обрезается и не копируется.
+                    if (data.AsSpan(0, separator).Trim().Equals("uss".AsSpan(), StringComparison.Ordinal))
                     {
                         string path = data.Substring(separator + 1).Trim();
                         if (!string.IsNullOrEmpty(path))
